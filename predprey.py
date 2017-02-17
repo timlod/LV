@@ -1,169 +1,99 @@
-# Simple CA simulator in Python
-#
-# *** Game of Life Rule ***
-#
-# Copyright 2008-2012 Hiroki Sayama
-# sayama@binghamton.edu
+import sys, getopt
+import matplotlib.pyplot as plt
+import random as rd
+import scipy as sp
+import numpy as np
 
-import matplotlib
-matplotlib.use('TkAgg')
+nargin = len(sys.argv)
 
-import pylab as PL
-import random as RD
-import scipy as SP
+# Number of iterations the simulation will run for
+n = 10000
+# Rabbit growth rate
+a = 0.5
+# Rabbit death rate
+b = 0.01
+# Fox death rate
+c = 0.5
+# Fox reproduction rate
+d = 0.01
 
-RD.seed(42)
+# Time step of simulation
+dt = 0.1
+# Initial population of prey
+x0 = 100
+# Initial population of predators
+y0 = 100
 
-width = 50
-height = 50
-initProb = 0.2
-useInit = 0;
-useStep = 2;
-t = 0;
+try:
+    opts, args = getopt.getopt(sys.argv[1:],"n:x:y:a:b:c:d:t:")
+except getopt.GetoptError:
+    print 'predprey.py -n <no. of iterations> -x <init. pop. prey> -y <init. pop. pred.> -a <prey growth rate> -b <prey death rate> -c <pred. death rate> -d <prey reproduction rate> -t <timestep>'
+    sys.exit(2)
 
-def init():
-    if useInit:
-        init1();
-    else:
-        init2();
+for opt, arg in opts:
+    if opt == '-n':
+        n = int(arg)
+    elif opt == '-x':
+        x0 = float(arg)
+    elif opt == '-y':
+        y0 = float(arg)
+    elif opt == '-a':
+        a = float(arg)
+    elif opt == '-b':
+        b = float(arg)
+    elif opt == '-c':
+        c = float(arg)
+    elif opt == '-d':
+        d = float(arg)
+    elif opt == '-t':
+        dt = float(arg)
+
+
+def lv(n,x0,y0,a,b,c,d,dt):
+
+    paramString = 'n: {} x0: {} y0: {} a: {} b: {} c: {} d: {} dt: {}'.format(n,x0,y0,a,b,c,d,dt)
+    print paramString
+
+    # Initialise array with first values at zeroth index
+    x = np.zeros(n); x[0] = x0;
+    y = np.zeros(n); y[0] = y0;
+
+    # Calculate n iterations of the populations
+    for i in xrange(1,n-1):
+        # xc/yc are current x and y values
+        xc = x[i-1]
+        yc = y[i-1]
+        # Set threshold below which a population is declared dead
+        xc = 0 if xc < 0.1 else xc
+        yc = 0 if yc < 0.1 else yc
         
-def init1():
-    global time, config, nextConfig
-
-    time = 0
-    
-    config = SP.zeros([height, width])
-    for x in xrange(width):
-        for y in xrange(height):
-            if RD.random() < initProb:
-                state = 1
-            else:
-                state = 0
-            config[y, x] = state
-
-    nextConfig = SP.zeros([height, width])
-
-def init2():
-    global time, config, nextConfig
-
-    time = 0
-
-    config = SP.zeros([height, width])
-    nextConfig = SP.zeros([height, width]);
-    one = (5,5);
-    two = (5,25);
-    three = (5,35);
-    
-    config[one[0]][one[1]+1] = 1;
-    config[one[0]][one[1]+2] = 1;
-    config[one[0]+1][one[1]] = 1;
-    config[one[0]+1][one[1]+3] = 1;
-    config[one[0]+2][one[1]+1] = 1;
-    config[one[0]+2][one[1]+2] = 1;
-
-    config[two[0]][two[1]] = 1;
-    config[two[0]][two[1]+1] = 1;
-    config[two[0]+1][two[1]] = 1;
-    config[two[0]+1][two[1]+1] = 1;
-    config[two[0]+2][two[1]+2] = 1;
-    config[two[0]+2][two[1]+3] = 1;
-    config[two[0]+3][two[1]+2] = 1;
-    config[two[0]+3][two[1]+3] = 1;
-
-    config[three[0]][three[1]+1] = 1;
-    config[three[0]+1][three[1]+2] = 1;
-    config[three[0]+2][three[1]] = 1;
-    config[three[0]+2][three[1]+1] = 1;
-    config[three[0]+2][three[1]+2] = 1;
-    
-def draw():
-    PL.cla()
-    PL.pcolor(config, vmin = 0, vmax = 1, cmap = PL.cm.binary)
-    PL.axis('image')
-    PL.title('t = ' + str(time))
-
-def step():
-    if useStep == 0:
-        step0();
-    elif useStep == 1:
-        step1();
-    else:
-        step2();
         
-def step0():
-    global time, config, nextConfig
+        # Calculate the next step
+        x[i] = xc + (xc*a - xc*b*yc) * dt
+        y[i] = yc - (yc*c - yc*d*xc) * dt
 
-    time += 1
+        # Define timeline for plotting
+        timeline = np.arange(0.,dt*n,dt)
 
-    for x in xrange(width):
-        for y in xrange(height):
-            state = config[y, x]
-            numberOfAlive = 0
-            for dx in xrange(-1, 2):
-                for dy in xrange(-1, 2):
-                    numberOfAlive += config[(y+dy)%height, (x+dx)%width]
-            if state == 0 and numberOfAlive == 3:
-                state = 1
-            elif state == 1 and (numberOfAlive < 3 or numberOfAlive > 4):
-                state = 0
-            nextConfig[y, x] = state
+    # Make plots
+#    plt.figure()
 
-    config, nextConfig = nextConfig, config
+#    plt.plot(x,y)
+#    plt.ylabel('Prey')
+#    plt.xlabel('Predators')
+#    plt.title(paramString)
 
-def step2():
-    global time, config, nextConfig
+    plt.figure()
+    plt.plot(timeline,x,label='Prey')
+    plt.plot(timeline,y,label='Predators')
+    plt.ylabel('Population')
+    plt.xlabel('Time')
+    plt.title(paramString)
+    plt.legend()
 
-    time += 1
+lv(n,x0,y0,a,b,c,d,dt)
 
-    for x in xrange(width):
-        for y in xrange(height):
-            state = config[y, x]
-            numberOfAlive = 0
-            for dx in xrange(-1, 2):
-                for dy in xrange(-1, 2):
-                    numberOfAlive += config[(y+dy)%height, (x+dx)%width]
+# Validate what happens if we decrease the prey reproduction rate q:
+# Take the same parameters and make plots with decreased q - q is analogous to a in this case.
+plt.show()
 
-            rd = RD.random();
-            if state == 1:
-                if numberOfAlive < 3:
-                    if rd < 1-t:
-                        state = 0
-                elif numberOfAlive == 3 or numberOfAlive == 4:
-                    if rd > 1-t:
-                        state = 0
-                else:
-                    if rd < 1-t:
-                        state = 0
-            else:
-                if numberOfAlive == 4:
-                    if rd < 1-t:
-                        state = 1                        
-            nextConfig[y, x] = state
-
-    config, nextConfig = nextConfig, config
-    
-
-    
-def step1():
-    global time, config, nextConfig
-
-    time += 1
-
-    for x in xrange(width):
-        for y in xrange(height):
-            state = config[y, x]
-            numberOfAlive = 0
-            for dx in xrange(-1, 2):
-                for dy in xrange(-1, 2):
-                    numberOfAlive += config[(y+dy)%height, (x+dx)%width]
-            if state == 0 and numberOfAlive == 7:
-                state = 1
-            elif state == 1 and (numberOfAlive != 2 and numberOfAlive != 7):
-                state = 0
-            nextConfig[y, x] = state
-
-    config, nextConfig = nextConfig, config
-
-    
-import pycxsimulator
-pycxsimulator.GUI().start(func=[init,draw,step])
